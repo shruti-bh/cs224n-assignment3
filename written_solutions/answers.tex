@@ -1,0 +1,123 @@
+\documentclass[answers,fleqn]{exam}
+\usepackage[margin=0.4in]{geometry}
+\usepackage{amsmath}
+
+\begin{document}
+
+\begin{questions}
+\question A window into NER
+\begin{parts}
+\part
+\begin{subparts}
+\subpart
+Two examples -
+\begin{itemize}
+\item The weather in New York is pleasant. [New York = LOC]\\
+      The New York Times Company was founded in 1851. [New York Times Company = ORG]
+\item Austin Waters is my friend. [Austin Waters = PER] \\
+      Paddleboaters took to Lake Austin waters. [Lake Austin = LOC]
+\end{itemize}
+\subpart 
+It is important to use features apart from the word itself to predict
+named entity labels because the context around the word enables us to disambiguate among multiple named entity labels that can apply to that word.
+\subpart
+\begin{itemize}
+\item Capitalization of the first letter of the word
+\item Window of k words around the word and their POS tags
+\end{itemize}
+\end{subparts}
+\part
+\begin{subparts}
+\subpart
+\begin{eqnarray*}
+e^{(t)} \in R^{1 \times (2w+1)D} \\
+W \in R^{(2w+1)D \times H} \\
+U \in R^{H \times C}
+\end{eqnarray*}
+\subpart
+For each t, \\
+\begin{eqnarray*}
+e^{(t)} => O((2w+1)D) \\
+h^{(t)} => O((2w+1)wDH) \\
+\hat{y}^{(t)} => O(HC) \\
+\end{eqnarray*}
+Computational complexity of predicting labels for a sentence of length
+T is $O((2w+1)DHT + HCT)$
+\end{subparts}
+\part Coding
+\part Analyze the predictions of your model using the files generated.
+\begin{subparts}
+\subpart
+Best development entity-level F1 score = 0.85 \\
+Token-level confusion matrix \\
+\begin{tabular}{ |l|l|l|l|l|l| }
+\hline
+gold\textbackslash guess  &     PER     &    ORG    &     LOC   &      MISC   &     O \\ \hline
+PER    &     2926.00  &   43.00   &    81.00    &   16.00   &    83.00 \\
+ORG    &     109.00   &   1687.00  &   115.00   &   55.00   &    126.00 \\
+LOC    &     22.00    &   71.00   &    1931.00  &   21.00   &    49.00 \\
+MISC   &     37.00    &   49.00   &    47.00   &    1030.00  &   105.00 \\
+O      &     30.00    &   46.00   &    21.00   &    29.00   &    42633.00 \\
+\hline
+\end{tabular}
+\begin{itemize}
+\item The model is good at detecting the ``Null'' class
+\item ORG is misclassified as O, LOC and PER in decreasing frequency. ORG  seems to be the class which the model is most confused about
+\item LOC is sometimes misclassified as ORG
+\item MISC is sometimes misclassified as NULL
+\item The model is pretty good at recognizing PER and O (Null) labels
+\end{itemize}
+\subpart
+2 modeling limitations of the window-based model
+\begin{itemize}
+\item Window size 1 forces the model to make predictions based on a very local context of one word on either side of the current word. This restricts the model's ability to disambiguate the correct word sense.
+
+Due to window size 1, the word ``Ashes'' has context ``the Ashes is'' which does not provide any disambiguating information. It is misclassified as LOC. Similarly, the word ``Test'' has context ``the Test and'' which causes it to be classified independent of the context that it is followed by ``County...'' which might have helped provide more useful information for classification.
+\begin{verbatim}
+Australia will defend the Ashes in
+y*: LOC       O    O      O   MISC  O
+y': LOC       O    O      O   LOC   O
+x : a six-test series against England during a four-month tour
+y*: O O        O      O       LOC     O      O O          O
+y': O O        O      O       LOC     O      O O          O
+x : starting on May 13 next year , the Test and County Cricket Board
+y*: O        O  O   O  O    O    O O   ORG  ORG ORG    ORG     ORG
+y': O        O  O   O  O    O    O O   MISC O   ORG    ORG     ORG
+\end{verbatim}
+
+\item The model cannot consider non-local context in making it's decisions
+\begin{verbatim}
+x : Pint is looking for people . Pint Corp is doing well . 
+y*:                                                        
+y': PER  O  O       O   O      O ORG  ORG  O  O     O    O 
+\end{verbatim}
+\end{itemize}
+\end{subparts}
+\end{parts}
+\question Recurrent neural nets for NER
+\begin{parts}
+\part
+\begin{subparts}
+\subpart How many more parameters does the RNN model in comparison to the window-based model? \\
+The additional parameters come from the dependence on the previous time step hidden layer $h^{(t-1)}W_h$ i.e. $W_h \in R^{H \times H}$ is the additional parameter 
+\subpart What is the computational complexity of predicting labels for a sentence of length T (for the RNN model)? \\
+For each time step, $O(D \times H + H \times H + H \times C)$ \\
+If $C << H$ and $C << D$, then $O(D \times H + H \times H)$
+For t time steps, $O(DHT + H^2T)$ computational complexity for prediction 
+\end{subparts}
+\part 
+\begin{subparts}
+\subpart  Name at least one scenario in which decreasing the cross-entropy cost would lead to an \textit{decrease} in entity-level F1 scores. \\
+In a multi-word enitity, e.g. New/LOC York/LOC - If our prediction changed from New/MISC York/MISC to New/MISC York/LOC, then the cross entropy error decreases since we predicted one more word correctly. But the change also implies that we are predicting two entities incorrectly (New/MISC and York/LOC) as opposed to one entity previously (New/MISC York/MISC). This decreases the precision, while recall remains the same. Decreased precision decreases F1.
+\subpart Why it is diffcult to directly optimize for F1? \\
+F1 is non-convex. If F1 is computed at the entity level, computation of F1 at each epoch would require doing prediction over the entire corpus which may be very expensive. And since the entire corpus is required, it is not possible to batch (stochastic) and/or parallelize the training.
+\end{subparts}
+\part
+\begin{subparts}
+\subpart
+How would the loss and gradient updates change if we did not use masking?
+How does masking solve this problem?
+\end{subparts}
+\end{parts}
+\end{questions}
+\end{document}
