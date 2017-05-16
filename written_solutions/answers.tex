@@ -112,11 +112,21 @@ In a multi-word enitity, e.g. New/LOC York/LOC - If our prediction changed from 
 \subpart Why it is diffcult to directly optimize for F1? \\
 F1 is non-convex. If F1 is computed at the entity level, computation of F1 at each epoch would require doing prediction over the entire corpus which may be very expensive. And since the entire corpus is required, it is not possible to batch (stochastic) and/or parallelize the training.
 \end{subparts}
+\part Coding
 \part
 \begin{subparts}
 \subpart
 How would the loss and gradient updates change if we did not use masking?
-How does masking solve this problem?
+How does masking solve this problem? \\
+$J = \sum_{t=1}^M CE(\hat{y}^t,y^t)$ would be the loss if we did not use maksing. If sentence length $T < M$, then there will be additional predictions for padded tokens and the loss on those padded tokens will be included in the loss computation. Similarly, gradients with respect to $W_h$ will be updated based on errors on the padden tokens as well. Masking makes the padded tokens error to zero. So, neither loss nor gradient updates are affected by the padded tokens prediction error.
+\subpart Coding
+\end{subparts}
+\part Coding
+\part Development F-1 score = 86 \%
+\part 
+\begin{subparts}
+\subpart Describe at least 2 modeling limitations of this RNN model and support these conclusions using examples from your model's output.
+\subpart For each limitation, suggest some way you could extend the model to overcome the limitation.
 \end{subparts}
 \end{parts}
 \end{questions}
